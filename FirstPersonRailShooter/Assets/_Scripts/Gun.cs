@@ -42,6 +42,8 @@ public class Gun : MonoBehaviour
         if (bulletCount > 0)
         {
             // Fire weapon.
+
+            // Play fire audio.
             fireAudio.Play();
             // Decrement bullet count.
             bulletCount -= 1;
@@ -71,6 +73,8 @@ public class Gun : MonoBehaviour
                     }
                 }
             }
+            // Shake camera.
+            CameraShake.ShakeCamera();
         }
         else
         {
