@@ -1,12 +1,15 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Gun : MonoBehaviour
 {
     [Header("Inscribed")]
     public AudioSource fireAudio;
     public GameObject hitParticlesPrefab;
+    public Image cylinderImage;
+    public Text reloadText;
     public int damage;
     public float reloadTime;
 
@@ -23,9 +26,15 @@ public class Gun : MonoBehaviour
 
     private void Update()
     {
-        // Fire gun on user input.
-        if (Input.GetKeyDown(KeyCode.Mouse0) && !isReloading)
-            Fire();
+        if (!isReloading)
+        {
+            // Fire on user input.
+            if (Input.GetKeyDown(KeyCode.Mouse0))
+                Fire();
+            // Reload user input.
+            if (Input.GetKeyDown(KeyCode.Mouse1))
+                Reload();
+        }
     }
 
     void Fire()
@@ -36,14 +45,17 @@ public class Gun : MonoBehaviour
             fireAudio.Play();
             // Decrement bullet count.
             bulletCount -= 1;
-            //
+            if (bulletCount == 0)
+                reloadText.gameObject.SetActive(true);
+            // Update cylinder (ammo) UI.
+            cylinderImage.fillAmount -= 1f / (float)bulletCountMax;
+            // Raycast for collision.
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit, rayDistanceMax))
             {
                 if (hit.collider != null) // Checking if we actually hit something.
                 {
-                    Debug.Log("Hit: " + hit.collider.gameObject.name);
                     // Spawn instance of hit particles.
                     GameObject hitPartGO = Instantiate(hitParticlesPrefab);
                     hitPartGO.transform.position = hit.point;
@@ -63,24 +75,38 @@ public class Gun : MonoBehaviour
         else
         {
             // If player fires while out of ammo, force reload.
-            StartCoroutine(Reload());
+            Reload();
         }
     }
 
-    IEnumerator Reload()
+    void Reload()
+    {
+        if (bulletCount == bulletCountMax)
+            return;
+
+        StartCoroutine(ReloadRoutine());
+    }
+
+    IEnumerator ReloadRoutine()
     {
         // Initialize reload state.
+        if (reloadText.gameObject.activeSelf)
+            reloadText.gameObject.SetActive(false);
         isReloading = true;
-        reloadTimer = 0f;
+        reloadTimer = (reloadTime / (float)bulletCountMax) * (float)bulletCount;
         // Pause for reloadTime (seconds).
         while (reloadTimer < reloadTime)
         {
+            // Timer tick.
             reloadTimer += Time.deltaTime;
+            // Update cylinder (ammo) UI image.
+            cylinderImage.fillAmount = reloadTimer / reloadTime;
             yield return null;
         }
         // Reset values.
         bulletCount = bulletCountMax;
         isReloading = false;
         reloadTimer = 0f; // Although this is redundant, it ensures (reloadTimer / reloadTime) will always be accurate between reloads.
+        cylinderImage.fillAmount = 1f;
     }
 }
